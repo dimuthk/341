@@ -72,8 +72,10 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
                  zip(words,words[1:],words[2:],words[3:],words[4:])]
         for grams in grams_arr:
           for gram in grams:
-            if gram in self.anchors:
-              self.anchors[gram] += 1
+            gram_str = reduce(lambda x,y: x+' '+y,gram)
+            
+            if gram_str in self.anchors:
+              self.anchors[gram_str] += 1
       
                 
     elif name == 'title' and self.in_page == True:
@@ -99,8 +101,8 @@ if len(sys.argv) != 3:
 
 anchors = {}
 #read in anchor_texts_anum page
-for fname in os.listdir('anchors_anum/'):
-  for line in open('anchors_anum/' + fname,'r'):
+for fname in os.listdir('../anchors_anum/'):
+  for line in open('../anchors_anum/' + fname,'r'):
     anchors[line.split('<>')[2].strip()] = 0
 
 print('initialized hash map. num words: ' + str(len(anchors.keys())))
@@ -108,10 +110,10 @@ print('initialized hash map. num words: ' + str(len(anchors.keys())))
 
 for fnum in range(int(sys.argv[1]), int(sys.argv[2])):
   handler = AnchorTextCntContentHandler(anchors)
-  xml.sax.parse(open("wiki_sub/" + str(fnum) + '.xml'), handler)
+  xml.sax.parse(open("../wiki_sub/" + str(fnum) + '.xml'), handler)
   print('tallied anchor counts for ' + str(fnum))
 
-  with open('anchors_tally/' + str(fnum),'w') as f:
+  with open('../anchors_tally/' + str(fnum),'w') as f:
     for key in handler.anchors.keys():
       f.write(key + '<>' + str(handler.anchors[key]) + '\n')
   print('wrote anchor counts for ' + str(fnum))

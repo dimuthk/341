@@ -69,7 +69,8 @@ class WikiContentHandler(xml.sax.ContentHandler):
           
         #retrieve and print anchor texts/entities.
         matches = re.findall('\[\[.*?\]\]', self.text)
-        anum = lambda x: re.sub(r'([^\s\w]|_)+', ' ', x.lower().replace('\n',''))
+        mid = lambda x: re.sub(r'([^\s\w]|_)+', ' ', x.lower().replace('\n',''))
+        anum = lambda x: ' '.join([word for word in mid(x).split()])
         
         for match in matches:
             match = match[2:-2] #trim '[[' and ']]'
@@ -122,10 +123,10 @@ if len(sys.argv) != 3:
 
 for fnum in range(int(sys.argv[1]), int(sys.argv[2])):
   print('starting ' + str(fnum))
-  raw = open('anchors_raw/' + str(fnum),'w')
-  anum = open('anchors_anum/' + str(fnum),'w')
+  raw = open('../anchors_raw/' + str(fnum),'w')
+  anum = open('../anchors_anum/' + str(fnum),'w')
  
-  xml.sax.parse(open("wiki_sub/" + str(fnum) + '.xml'), WikiContentHandler(raw, anum))
+  xml.sax.parse(open("../wiki_sub/" + str(fnum) + '.xml'), WikiContentHandler(raw, anum))
 
   raw.close()
   anum.close()
