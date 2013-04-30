@@ -21,6 +21,7 @@ import cgi
 #wiki_sub/0.xml, 1.xml, ... n.xml
 
 
+
  
 class AnchorTextCntContentHandler(xml.sax.ContentHandler):
   def __init__(self,f):
