@@ -55,7 +55,7 @@ class WikiContentHandler(xml.sax.ContentHandler):
 
   def isStop(self,word):
     for stop in self.stops:
-      if word in stop + ':':
+      if stop + ':' in word:
         return True
     return False
 
@@ -90,13 +90,14 @@ class WikiContentHandler(xml.sax.ContentHandler):
             title = self.anum(self.title)
             entity = self.anum(entity)
             anchor = self.anum(anchor)
-            
+
             if title in self.redirects:
               title = self.redirects[title]
             if entity in self.redirects:
               entity = self.redirects[entity]
-            if anchor in self.redirects:
-              anchor = self.redirects[anchor]
+            #if anchor in self.redirects:
+             # anchor = self.redirects[anchor]
+
 
             self.raw.write(title + '<>' + entity + '<>' + anchor + '\n')
                 

@@ -93,14 +93,22 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
         if self.cnt % 1000 == 0:
           print(self.cnt)
 
-        matches = re.findall('\[\[.*?\]\]', self.text)
+#        matches = re.findall('\[\[.*?\]\]', self.text)
+
+#        for match in matches: #consider the anchor texts separately
+#          self.text = self.text.replace(match,'<>')
+
         mid = lambda x: re.sub(r'([^\s\w]|_)+', ' ', x.lower().replace('\n',''))
         anum = lambda x: ' '.join([word for word in mid(x).split()])
-        
+
+
         self.text = anum(self.text) #return only alpha numeric + spaces
+  
 
         words = self.text.split()
         words = [word.strip() for word in words]
+
+        
 
         grams_arr = [zip(words), zip(words, words[1:]), zip(words, words[1:], words[2:]), \
                  zip(words,words[1:],words[2:],words[3:]), \
@@ -108,8 +116,8 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
         for grams in grams_arr:
           for gram in grams:
               gram_str = reduce(lambda x,y: x+' '+y,gram)
-              if gram_str in self.redirects:
-                gram_str = self.redirects[gram_str]
+#              if gram_str in self.redirects:
+#                gram_str = self.redirects[gram_str]
 
               
               if gram_str in self.anchors:
@@ -146,6 +154,7 @@ for fname in os.listdir('../anchors_anum/'):
 print('initialized hash map. num words: ' + str(len(anchors.keys())))
 
 redirects = {}
+a = '''
 for line in open('../redirects','r'):
   parts = line.split('<>')
   title = parts[0].strip()
@@ -156,7 +165,7 @@ for line in open('../redirects','r'):
 
 if '' in redirects:
   del redirects['']
-  
+'''  
 print 'got redirects'
 
 

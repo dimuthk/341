@@ -1,41 +1,31 @@
 import xml.sax
 import re
-import os
 import pdb
 import sys
+import os
 
 #THIS CODE IS MADE FOR PYTHON 3.0+
-#use a SAX parser to retrieve frequency counts for the anchor_texts
-#listed in anchors_anum, the alphanumeric anchor-text list.
-
-#upload set of unique anchor texts to memory, run SAX parser through
-#wiki dataset. for each text block, retrieve alphanumeric + space characters,
-#tokenize words. retrieve 1-5 n-grams using zip. generate frequency counts
-#accordingly by checking hashes to document.
-
-#print resultant hash table to file.
-
-#NEEDS
-#anchors_anum/0, 1, ..., n
+#use a SAX parser to retrieve the following info from the wiki set:
+#page_title<>link_destination<>anchor_text
 
 #CMD INPUT
-#wiki_sub/start_num.xml, end_num.xml
+#wiki_sub/start_num, end_num
 
 #OUTPUT
-#anchors_tally/start_num, (start_num+1), ..., end_num
+#anchors_raw/n
 
- 
-class AnchorTextCntContentHandler(xml.sax.ContentHandler):
-  def __init__(self, anchors):
+
+
+class WikiContentHandler(xml.sax.ContentHandler):
+  def __init__(self, redirects):
     xml.sax.ContentHandler.__init__(self)
     self.title = ""
-    self.ignore = False
     self.get_text = False
     self.get_title = True
     self.in_page = False
+    self.debug = False
     self.text = ""
     self.cnt = 0
-    self.anchors = anchors
     self.stops = ['Media','Special','Talk','User','User talk', 'Wikipedia',\
          'Wikipedia talk', 'File', 'File talk', 'MediaWiki',\
          'MediaWiki talk','Template','Template talk','Help',\
@@ -43,8 +33,11 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
          'Portal talk','Book','Book talk','Education Program',\
          'Education Program talk','TimedText','TimedText talk',\
          'Module','Module talk']
-
- 
+    self.redirects = redirects
+    
+    mid = lambda x: re.sub(r'([^\s\w]|_)+', ' ', x.lower().replace('\n',''))
+    self.anum = lambda x: ' '.join([word for word in mid(x).split()])
+    
   def startElement(self, name, attrs):
     if name == 'page': #new page
         self.in_page = True
@@ -52,8 +45,6 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
         self.title = ""
         self.text = ""
 
-    elif name == 'redirect': #a redirect:
-        self.ignore = True
 
     elif name == 'title':
         self.get_title = True
@@ -61,66 +52,52 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
     elif name == 'text':
         self.get_text = True
 
-  def isStop(self, word):
+  def isStop(self,word):
     for stop in self.stops:
       if word in stop + ':':
         return True
     return False
 
-
+ 
   def endElement(self, name):
     if name == 'page' and self.ignore == False:
         self.in_page = False
         self.cnt += 1
         if self.cnt % 1000 == 0:
           print(self.cnt)
-
-        #DEBUG
-        mid = lambda x: re.sub(r'([^\s\w]|_)+', ' ', x.lower().replace('\n',''))
-        anum2 = lambda x: ' '.join([word for word in mid(x).split()])
-        matches = re.findall('\[\[.*?\]\]', self.text)
-        matches = [match[2:-2] for match in matches]
-        for i in range(len(matches)):
-          if '|' in matches[i]:
-            matches[i] = matches[i].split('|')[1]
-          matches[i] = matches[i].split('#')[0]
-
-        for i in range(len(matches)):
-          if self.isStop(matches[i]):
-            matches[i] = ''
-        
-        orig = self.text
-
-        matches = [anum2(match) for match in matches]
-
-        anum = lambda x: re.sub(r'([^\s\w]|_)+', ' ', x.lower().replace('\n',''))
-        self.text = anum(self.text) #return only alpha numeric + spaces
-        self.text = ' '.join([word for word in self.text.split()])
-
-        
-        words = self.text.split()
-        words = [word.strip() for word in words]
  
-        
 
-        total = list()
-        grams_arr = [zip(words), zip(words, words[1:]), zip(words, words[1:], words[2:]), \
-                 zip(words,words[1:],words[2:],words[3:]), \
-                 zip(words,words[1:],words[2:],words[3:],words[4:])]
-        
-        for grams in grams_arr:
-          for gram in grams:
-              gram_str = reduce(lambda x,y: x+' '+y,gram)
-              total.append(gram_str)
+        #retrieve and print anchor texts/entities.
+        matches = re.findall('\[\[.*?\]\]', self.text)
 
-              if gram_str in self.anchors:
-                self.anchors[gram_str] += 1
-
+        self.title = self.title.split('#')[0]
         for match in matches:
-          if match not in total and len(match.split(' ')) < 6 and match != '':
-            pdb.set_trace()
-        
-        
+            match = match[2:-2] #trim '[[' and ']]'
+            if '|' in match:
+                parts = match.split('|')
+                entity = parts[0].split('#')[0].strip()
+                anchor = parts[1].split('#')[0].strip()
+
+            else:
+                entity = match.split('#')[0].strip()
+                anchor = match.split('#')[0].strip()
+
+            
+            if self.isStop(self.title) or self.isStop(entity) or self.isStop(anchor):
+              continue
+
+            title = self.anum(self.title)
+            entity = self.anum(entity)
+            anchor = self.anum(anchor)
+            
+            if title in self.redirects:
+              title = self.redirects[title]
+            if entity in self.redirects:
+              entity = self.redirects[entity]
+            if anchor in self.redirects:
+              anchor = self.redirects[anchor]
+            if entity == 'saginaw' or anchor == 'saginaw':
+              pdb.set_trace()
     elif name == 'title' and self.in_page == True:
         self.get_title = False
 
@@ -129,7 +106,7 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
                     
          
   def characters(self, content):
-    if self.ignore == False and self.in_page == True:
+    if self.in_page == True:
         if self.get_text == True:
             self.text += content
             
@@ -140,29 +117,14 @@ class AnchorTextCntContentHandler(xml.sax.ContentHandler):
 if len(sys.argv) != 3:
   sys.exit('usage: python get_anchor_cnts.py start_num end_num')
 
-
-debug = False
-anchors = {}
-#read in anchor_texts_anum page
-for fname in os.listdir('../anchors_anum/'):
-  for line in open('../anchors_anum/' + fname,'r'):
-    anchors[line.split('<>')[2].strip()] = 0
-
-print('initialized hash map. num words: ' + str(len(anchors.keys())))
-
+redirects = {}
+  
+print 'got redirects'
 
 for fnum in range(int(sys.argv[1]), int(sys.argv[2])):
-  handler = AnchorTextCntContentHandler(anchors)
-  xml.sax.parse(open("../../cs341/wiki_sub/" + str(fnum) + '.xml'), handler)
-  print('tallied anchor counts for ' + str(fnum))
+  print('starting ' + str(fnum))
+ 
+  xml.sax.parse(open("../wiki_sub/" + str(fnum) + '.xml'), WikiContentHandler(redirects))
 
-  with open('../anchors_tally/' + str(fnum),'w') as f:
-    if debug == False:
-      for key in handler.anchors.keys():
-        f.write(key + '<>' + str(handler.anchors[key]) + '\n')
-  print('wrote anchor counts for ' + str(fnum))
-
-  for key in anchors.keys():
-    anchors[key] = 0
-  
+  print('finished ' + str(fnum))
 
